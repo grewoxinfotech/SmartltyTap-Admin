@@ -18,7 +18,17 @@ export default function ProductsCatalog() {
           onClick={() =>
             update((prev) => ({
               ...prev,
-              products: [{ id: createId("PROD"), name: "New Product", price: 29.99, stock: 50, imageUrl: "" }, ...prev.products],
+              products: [
+                {
+                  id: createId("PROD"),
+                  name: "New Product",
+                  price: 29.99,
+                  stock: 50,
+                  imageUrl: "",
+                  images: [],
+                },
+                ...prev.products,
+              ],
             }))
           }
         >
@@ -34,6 +44,7 @@ export default function ProductsCatalog() {
           <thead>
             <tr>
               <th>Product Name</th>
+              <th>Images</th>
               <th>Price</th>
               <th>Stock Level</th>
               <th>Status</th>
@@ -44,11 +55,26 @@ export default function ProductsCatalog() {
             {products.map((product, i) => (
               <tr key={i}>
                 <td style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                  <div style={{ padding: "0.5rem", background: "var(--color-bg-base)", borderRadius: "var(--radius-sm)" }}>
-                    <PackageIcon size={16} color="var(--color-text-muted)" />
-                  </div>
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      style={{
+                        width: "2rem",
+                        height: "2rem",
+                        borderRadius: "0.5rem",
+                        objectFit: "cover",
+                        border: "1px solid var(--color-border)",
+                      }}
+                    />
+                  ) : (
+                    <div style={{ padding: "0.5rem", background: "var(--color-bg-base)", borderRadius: "var(--radius-sm)" }}>
+                      <PackageIcon size={16} color="var(--color-text-muted)" />
+                    </div>
+                  )}
                   {product.name}
                 </td>
+                <td style={{ fontWeight: 600 }}>{product.images?.length ?? (product.imageUrl ? 1 : 0)}</td>
                 <td style={{ fontWeight: 600 }}>${product.price.toFixed(2)}</td>
                 <td>{product.stock} units</td>
                 <td>

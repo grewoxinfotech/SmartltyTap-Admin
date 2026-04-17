@@ -49,55 +49,55 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* #f8fafc */
-    --foreground: 222.2 84% 4.9%;
+    --background: 48 13% 92%; /* #EFEEEA */
+    --foreground: 203 34% 23%; /* #273F4F */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 203 34% 23%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 243 75% 59%; /* Indigo-600 */
+    --popover-foreground: 203 34% 23%;
+    --primary: 17 99% 63%; /* #FE7743 */
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --secondary: 48 13% 92%;
+    --secondary-foreground: 203 34% 23%;
+    --muted: 48 13% 92%;
+    --muted-foreground: 203 24% 35%;
+    --accent: 203 34% 23%; /* #273F4F */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 214.3 31.8% 91.4%;
+    --border: 48 12% 88%;
+    --input: 48 12% 88%;
+    --ring: 17 99% 63%;
     --radius: 0.75rem;
   }
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 203 34% 12%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 203 34% 16%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 203 34% 16%;
     --popover-foreground: 210 40% 98%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 17 99% 63%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 203 30% 20%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 203 30% 20%;
+    --muted-foreground: 48 10% 78%;
+    --accent: 203 34% 23%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 203 24% 28%;
+    --input: 203 24% 28%;
+    --ring: 17 99% 63%;
   }
 }
 
 @layer base {
   * {
-    @apply border-slate-200;
+    @apply border-border;
   }
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-background text-foreground;
   }
 }

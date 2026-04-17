@@ -47,6 +47,7 @@ export type Product = {
   price: number;
   stock: number;
   imageUrl: string;
+  images?: string[];
 };
 
 export type Template = {
@@ -127,8 +128,28 @@ const seed: AdminDB = {
     },
   ],
   products: [
-    { id: "PROD-1", name: "Premium Metal Card", price: 49.99, stock: 150, imageUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d" },
-    { id: "PROD-2", name: "Matte Black PVC Card", price: 19.99, stock: 430, imageUrl: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338" },
+    {
+      id: "PROD-1",
+      name: "Premium Metal Card",
+      price: 49.99,
+      stock: 150,
+      imageUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d",
+      images: [
+        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d",
+        "https://images.unsplash.com/photo-1512428559087-560fa5ceab42",
+      ],
+    },
+    {
+      id: "PROD-2",
+      name: "Matte Black PVC Card",
+      price: 19.99,
+      stock: 430,
+      imageUrl: "https://images.unsplash.com/photo-1586075010923-2dd4570fb338",
+      images: [
+        "https://images.unsplash.com/photo-1586075010923-2dd4570fb338",
+        "https://images.unsplash.com/photo-1563013544-824ae1b704d3",
+      ],
+    },
   ],
   templates: [
     { id: "TPL-01", name: "Executive Dark", category: "PREMIUM", previewUrl: "https://example.com/tpl-1", active: true },
