@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { createId, loadDB, saveDB, type AdminDB } from "@/lib/admin-store";
 
 export function useAdminDB() {
-  const [db, setDb] = useState<AdminDB | null>(() => (typeof window === "undefined" ? null : loadDB()));
+  const [db, setDb] = useState<AdminDB | null>(null);
+
+  useEffect(() => {
+    setDb(loadDB());
+  }, []);
 
   const update = useCallback((recipe: (prev: AdminDB) => AdminDB) => {
     setDb((prev) => {

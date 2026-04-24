@@ -1,8 +1,10 @@
 "use client";
 
-import { Bell, Search, Menu, User } from "lucide-react";
+import { Bell, Search, Menu, User, LogOut } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 
 export const Topbar = () => {
+  const { data: session } = useSession();
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-30 ml-64">
       <div className="flex items-center flex-1 gap-4">
@@ -28,15 +30,23 @@ export const Topbar = () => {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         </button>
         <div className="w-px h-6 bg-slate-200"></div>
-        <button className="flex items-center gap-3 hover:bg-slate-50 p-1.5 pr-3 rounded-full border border-slate-200 transition-colors">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold text-sm">
-            AD
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex flex-col items-end">
+            <span className="text-sm font-bold text-slate-900 leading-none truncate max-w-[120px]">
+              {session?.user?.name || "Admin"}
+            </span>
+            <span className="text-[10px] font-bold text-indigo-600 tracking-widest uppercase mt-1">
+              {session?.user?.role || "User"}
+            </span>
           </div>
-          <div className="hidden md:flex flex-col items-start">
-            <span className="text-sm font-medium text-slate-700 leading-none">Admin User</span>
-            <span className="text-xs text-slate-500 mt-1">Superadmin</span>
-          </div>
-        </button>
+          <button 
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+            title="Logout"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </header>
   );

@@ -1,8 +1,8 @@
 "use client";
 
 import { Users, ShoppingCart, CreditCard, DollarSign, Download, TrendingUp } from "lucide-react";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { DataTable } from "@/components/dashboard/DataTable";
+import { StatsCard } from "@/components/ui/StatsCard";
+import { DataTable } from "@/components/ui/DataTable";
 import { useAdminDB } from "@/hooks/use-admin-db";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -76,30 +76,30 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard 
           title="Total Revenue" 
-          value={`$${kpis.revenue.toLocaleString()}`} 
+          value={`₹${kpis.revenue.toLocaleString()}`} 
           icon={DollarSign} 
-          trend="12.5%" 
+          trend="+₹1,240 today" 
           trendUp={true} 
         />
         <StatsCard 
-          title="Active Users" 
+          title="Total Customers" 
           value={`${kpis.activeUsers}`} 
           icon={Users} 
-          trend="5.2%" 
+          trend="+5 new this week" 
           trendUp={true} 
         />
         <StatsCard 
-          title="Total Orders" 
-          value={`${kpis.totalOrders}`} 
-          icon={ShoppingCart} 
-          trend="2.1%" 
-          trendUp={false} 
-        />
-        <StatsCard 
-          title="Cards Issued" 
+          title="VCards Issued" 
           value={`${kpis.totalCards}`} 
           icon={CreditCard} 
-          trend="18.2%" 
+          trend="+3 registered" 
+          trendUp={true} 
+        />
+        <StatsCard 
+          title="Success Rate" 
+          value="98.2%" 
+          icon={TrendingUp} 
+          trend="Card Sync Stable" 
           trendUp={true} 
         />
       </div>

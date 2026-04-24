@@ -31,6 +31,8 @@ export type Card = {
 export type Profile = {
   id: string;
   userId: string;
+  name?: string;
+  profile_image?: string;
   templateId: string;
   links: {
     googleReview: string;
@@ -39,6 +41,9 @@ export type Profile = {
     website: string;
   };
   featuresEnabled: boolean;
+  gallery?: string[];
+  brochure_url?: string | null;
+  brochure_name?: string | null;
 };
 
 export type Product = {
@@ -117,6 +122,7 @@ const seed: AdminDB = {
     {
       id: "PROF-001",
       userId: "USR-1001",
+      name: "John Doe Official",
       templateId: "TPL-01",
       links: {
         googleReview: "https://g.page/demo",
@@ -125,6 +131,9 @@ const seed: AdminDB = {
         website: "https://smartlytap.com",
       },
       featuresEnabled: true,
+      gallery: ["https://images.unsplash.com/photo-1557804506-669a67965ba0", "https://images.unsplash.com/photo-1556761175-b413da4baf72"],
+      brochure_url: null,
+      brochure_name: null,
     },
   ],
   products: [

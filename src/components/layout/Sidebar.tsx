@@ -13,12 +13,19 @@ import {
   LayoutTemplate,
   BarChart3,
   Receipt,
-  Network,
-  Settings 
+  ShieldCheck,
+  FileText,
+  Settings,
+  LogOut 
 } from "lucide-react";
+
+import { useSession, signOut } from "next-auth/react";
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role || "USER";
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   const isNavActive = (path: string) => {
     if (path === "/dashboard") return pathname === "/dashboard";
@@ -27,36 +34,49 @@ export const Sidebar = () => {
 
   const navGroups = [
     {
-      title: "Overview",
+      title: "Main Menu",
       items: [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+        { label: "My VCards", href: "/dashboard/profiles", icon: Users, hideForAdmin: true },
+        { label: "Scan Reports", href: "/dashboard/analytics", icon: BarChart3 },
       ]
     },
-    {
-      title: "eCommerce",
-      items: [
-        { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
-        { label: "Products", href: "/dashboard/products", icon: Package },
-      ]
-    },
-    {
-      title: "Smart System",
-      items: [
-        { label: "Card Management", href: "/dashboard/cards", icon: CreditCard },
-        { label: "Smart Profiles", href: "/dashboard/profiles", icon: LinkIcon },
-        { label: "Templates", href: "/dashboard/templates", icon: LayoutTemplate },
-      ]
-    },
-    {
-      title: "Platform",
-      items: [
-        { label: "Users", href: "/dashboard/users", icon: Users },
-        { label: "Resellers", href: "/dashboard/resellers", icon: Network },
-        { label: "Payments", href: "/dashboard/payments", icon: Receipt },
-        { label: "Settings", href: "/dashboard/settings", icon: Settings },
-      ]
-    }
+    ...(isAdmin ? [
+      {
+        title: "eCommerce",
+        items: [
+          { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
+          { label: "Products", href: "/dashboard/products", icon: Package },
+        ]
+      },
+      {
+        title: "Product Management",
+        items: [
+          { label: "Physical Cards", href: "/dashboard/cards", icon: CreditCard },
+          { label: "Digital VCards", href: "/dashboard/profiles", icon: LinkIcon },
+          { label: "VCard Templates", href: "/dashboard/templates", icon: LayoutTemplate },
+        ]
+      },
+      {
+        title: "Sales & Control",
+        items: [
+          { label: "Admin Users", href: "/dashboard/users", icon: Users },
+          { label: "Customer Leads", href: "/dashboard/leads", icon: FileText },
+          { label: "Subscription Plans", href: "/dashboard/subscriptions", icon: Receipt },
+          { label: "Payment Gateway", href: "/dashboard/payments", icon: Receipt },
+          { label: "Settings", href: "/dashboard/settings", icon: Settings },
+        ]
+      }
+    ] : [
+      {
+        title: "Engagement",
+        items: [
+          { label: "Leads", href: "/dashboard/leads", icon: FileText },
+          { label: "Themes", href: "/dashboard/templates", icon: LayoutTemplate },
+          { label: "Profile Security", href: "/dashboard/security", icon: ShieldCheck },
+        ]
+      }
+    ])
   ];
 
   return (
@@ -75,7 +95,8 @@ export const Sidebar = () => {
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2">
               {group.title}
             </div>
-            {group.items.map((item, j) => {
+            {group.items.map((item: any, j) => {
+              if (item.hideForAdmin && isAdmin) return null;
               const Icon = item.icon;
               const isActive = isNavActive(item.href);
               return (
@@ -99,6 +120,24 @@ export const Sidebar = () => {
             })}
           </div>
         ))}
+      </div>
+      <div className="p-4 border-t border-slate-100 flex flex-col gap-2">
+        <div className="flex items-center gap-3 px-3 py-2">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-200">
+            {session?.user?.name?.[0] || 'U'}
+          </div>
+          <div className="flex flex-col min-w-0">
+             <span className="text-xs font-bold text-slate-900 truncate">{session?.user?.name || 'User'}</span>
+             <span className="text-[10px] text-slate-500 truncate">{session?.user?.email}</span>
+          </div>
+        </div>
+        <button 
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition-all group"
+        >
+          <LogOut className="w-5 h-5 text-rose-400 group-hover:text-rose-600" />
+          Sign Out
+        </button>
       </div>
     </aside>
   );
