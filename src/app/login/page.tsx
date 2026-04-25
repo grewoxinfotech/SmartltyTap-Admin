@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2, Zap, ArrowRight, ShieldCheck } from "lucide-react";
 
@@ -27,10 +27,15 @@ export default function LoginPage() {
       if (res?.error) {
         setError("Invalid email or password. Please try again.");
       } else {
-        router.push("/dashboard");
+        const currentSession = await getSession();
+        if (currentSession?.user?.mustResetPassword) {
+          router.push("/dashboard/security");
+        } else {
+          router.push("/dashboard");
+        }
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again later.");
     } finally {
       setLoading(false);

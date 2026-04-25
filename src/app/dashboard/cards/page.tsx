@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { adminApi } from "@/services/api";
 import { DataTable } from "@/components/ui/DataTable";
@@ -10,7 +10,7 @@ import {
   Plus, 
   CreditCard, 
   Activity, 
-  UserPlus, 
+  ShoppingCart,
   Download, 
   Edit, 
   ShieldCheck, 
@@ -20,24 +20,48 @@ import {
   Zap,
   Save,
   UserCircle,
-  CheckCircle2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+type CardRow = {
+  card_uid: string;
+  user_id: string | null;
+  batch_no?: string | null;
+  tap_count?: number;
+  is_active: boolean;
+};
+
+type UserRow = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type TemplateRow = {
+  id: string;
+  name: string;
+};
+
+type TemplateMeta = {
+  activeCount: number;
+} | null;
 
 export default function CardsManagement() {
   const { data: session } = useSession();
   const token = session?.user?.accessToken;
 
-  const [cards, setCards] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [cards, setCards] = useState<CardRow[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [templates, setTemplates] = useState<TemplateRow[]>([]);
+  const [templateMeta, setTemplateMeta] = useState<TemplateMeta>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Modals
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<any>(null);
+  const [selectedCard, setSelectedCard] = useState<CardRow | null>(null);
 
   // Form States
   const [registerForm, setRegisterForm] = useState({
@@ -50,24 +74,49 @@ export default function CardsManagement() {
     batch_no: ""
   });
 
-  const [assignForm, setAssignForm] = useState({
-    userId: ""
+  const [sellForm, setSellForm] = useState({
+    buyerName: "",
+    buyerEmail: "",
+    buyerPhone: "",
+    businessType: "Corporate",
+    templateId: "",
   });
 
-  const load = async () => {
+  const businessTypes = [
+    "Corporate",
+    "Doctor",
+    "Lawyer",
+    "Real Estate",
+    "Salon",
+    "Restaurant",
+    "Freelancer",
+    "Retail",
+    "Education",
+  ];
+
+  const loadTemplatesByBusinessType = useCallback(async (type: string) => {
+    if (!token) return;
+    const response = await adminApi.listTemplates(token, type);
+    setTemplates(response?.data || []);
+    setTemplateMeta(response?.meta || null);
+  }, [token]);
+
+  const load = useCallback(async () => {
     if (!token) return;
     try {
-      const [c, u] = await Promise.all([adminApi.listCards(token), adminApi.listUsers(token)]);
+      const [c, u, t] = await Promise.all([adminApi.listCards(token), adminApi.listUsers(token), adminApi.listTemplates(token, sellForm.businessType)]);
       setCards(c?.data || []);
       setUsers(u?.data || []);
+      setTemplates(t?.data || []);
+      setTemplateMeta(t?.meta || null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, sellForm.businessType]);
 
   useEffect(() => {
     load();
-  }, [token]);
+  }, [load]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +131,7 @@ export default function CardsManagement() {
       await load();
       setIsRegisterModalOpen(false);
       setRegisterForm({ card_uid: "", batch_no: "" });
-    } catch (err) {
+    } catch {
       alert("Card registration failed.");
     } finally {
       setSubmitting(false);
@@ -97,24 +146,38 @@ export default function CardsManagement() {
       await adminApi.updateCard(selectedCard.card_uid, { batch_no: editForm.batch_no }, token);
       await load();
       setIsEditModalOpen(false);
-    } catch (err) {
+    } catch {
       alert("Update failed.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleAssign = async (e: React.FormEvent) => {
+  const handleSell = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !selectedCard) return;
     setSubmitting(true);
     try {
-      await adminApi.assignCard(selectedCard.card_uid, assignForm.userId, token);
+      const result = await adminApi.sellCard({
+        cardUid: selectedCard.card_uid,
+        buyerName: sellForm.buyerName,
+        buyerEmail: sellForm.buyerEmail,
+        buyerPhone: sellForm.buyerPhone || undefined,
+        businessType: sellForm.businessType,
+        templateId: sellForm.templateId || undefined,
+      }, token);
       await load();
-      setIsAssignModalOpen(false);
-      setAssignForm({ userId: "" });
-    } catch (err) {
-      alert("Assignment failed.");
+      setIsSellModalOpen(false);
+      setSellForm({ buyerName: "", buyerEmail: "", buyerPhone: "", businessType: "Corporate", templateId: "" });
+      if (result?.data?.credentials?.temporaryPassword) {
+        alert(
+          `Buyer account created.\nEmail: ${result.data.credentials.email}\nTemporary Password: ${result.data.credentials.temporaryPassword}`
+        );
+      } else {
+        alert("Card sold successfully and linked to existing buyer.");
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Card sell failed.");
     } finally {
       setSubmitting(false);
     }
@@ -124,7 +187,7 @@ export default function CardsManagement() {
     {
       header: "Card ID (UID)",
       accessorKey: "card_uid",
-      cell: (row: any) => (
+      cell: (row: CardRow) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 group">
              <Cpu className="w-5 h-5 group-hover:text-indigo-600 transition-colors" />
@@ -139,7 +202,7 @@ export default function CardsManagement() {
     {
       header: "Assigned User",
       accessorKey: "user_id",
-      cell: (row: any) => {
+      cell: (row: CardRow) => {
         const user = users.find(u => u.id === row.user_id);
         return (
           <div className="flex items-center gap-2">
@@ -158,7 +221,7 @@ export default function CardsManagement() {
     {
       header: "Total Scans",
       accessorKey: "tap_count",
-      cell: (row: any) => (
+      cell: (row: CardRow) => (
         <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100 w-fit">
            <Wifi className="w-3.5 h-3.5 text-indigo-500" />
            <span className="font-black text-slate-900 text-xs">{row.tap_count || 0} <span className="text-[10px] text-slate-400 font-medium">Scans</span></span>
@@ -168,7 +231,7 @@ export default function CardsManagement() {
     {
       header: "Status",
       accessorKey: "is_active",
-      cell: (row: any) => (
+      cell: (row: CardRow) => (
         <div className="flex items-center gap-2">
           <div className={cn(
             "w-2 h-2 rounded-full",
@@ -186,17 +249,17 @@ export default function CardsManagement() {
     {
       header: "Actions",
       accessorKey: "actions",
-      cell: (row: any) => (
+      cell: (row: CardRow) => (
         <div className="flex items-center gap-1">
           <button
             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
             onClick={() => {
               setSelectedCard(row);
-              setIsAssignModalOpen(true);
+              setIsSellModalOpen(true);
             }}
-            title="Update User"
+            title="Sell Card"
           >
-            <UserPlus className="w-4 h-4" />
+            <ShoppingCart className="w-4 h-4" />
           </button>
           <button
             className="p-2 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all"
@@ -248,6 +311,11 @@ export default function CardsManagement() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Manage NFC Cards</h1>
           <p className="text-slate-500 mt-1 text-sm max-w-lg">Manage your physical cards, check scan counts, and assign them to users.</p>
+          {templateMeta && (
+            <p className="mt-2 text-xs font-semibold text-emerald-600">
+              Active templates: {templateMeta.activeCount}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -368,33 +436,78 @@ export default function CardsManagement() {
         </form>
       </Modal>
 
-      {/* Assign Modal */}
+      {/* Sell Modal */}
       <Modal
-        isOpen={isAssignModalOpen}
-        onClose={() => setIsAssignModalOpen(false)}
-        title="Assign Card to User"
+        isOpen={isSellModalOpen}
+        onClose={() => setIsSellModalOpen(false)}
+        title="Sell Card and Create Buyer Access"
         className="max-w-xl"
       >
-        <form onSubmit={handleAssign} className="space-y-6">
+        <form onSubmit={handleSell} className="space-y-6">
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-2">
              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Selected Card</div>
              <div className="text-sm font-mono font-bold text-slate-900 uppercase">{selectedCard?.card_uid}</div>
           </div>
-          
-          <Select 
-            label="Target User Identity"
-            value={assignForm.userId}
-            onChange={(val) => setAssignForm({ userId: val })}
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Buyer Name</label>
+            <input
+              required
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+              value={sellForm.buyerName}
+              onChange={(e) => setSellForm({ ...sellForm, buyerName: e.target.value })}
+              placeholder="Enter buyer full name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Buyer Email</label>
+            <input
+              required
+              type="email"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+              value={sellForm.buyerEmail}
+              onChange={(e) => setSellForm({ ...sellForm, buyerEmail: e.target.value })}
+              placeholder="buyer@company.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Buyer Phone</label>
+            <input
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+              value={sellForm.buyerPhone}
+              onChange={(e) => setSellForm({ ...sellForm, buyerPhone: e.target.value })}
+              placeholder="+91..."
+            />
+          </div>
+
+          <Select
+            label="Business Type"
+            value={sellForm.businessType}
+            onChange={async (val) => {
+              setSellForm({ ...sellForm, businessType: val, templateId: "" });
+              await loadTemplatesByBusinessType(val);
+            }}
             options={[
-               { value: "", label: "Select User Identity..." },
-               ...users.map(u => ({ value: u.id, label: `${u.name} (${u.email})`, icon: UserCircle }))
+              ...businessTypes.map((type) => ({ value: type, label: type })),
+            ]}
+          />
+
+          <Select
+            label="Default Template (Optional)"
+            value={sellForm.templateId}
+            onChange={(val) => setSellForm({ ...sellForm, templateId: val })}
+            options={[
+              { value: "", label: "Auto / No default template" },
+              ...templates.map((t) => ({ value: t.id, label: t.name })),
             ]}
           />
 
           <div className="flex gap-3">
-            <button type="button" className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm" onClick={() => setIsAssignModalOpen(false)}>Cancel</button>
+            <button type="button" className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm" onClick={() => setIsSellModalOpen(false)}>Cancel</button>
             <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-100">
-               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Assign User <UserPlus className="w-4 h-4" /></>}
+               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Sell Card <ShoppingCart className="w-4 h-4" /></>}
             </button>
           </div>
         </form>

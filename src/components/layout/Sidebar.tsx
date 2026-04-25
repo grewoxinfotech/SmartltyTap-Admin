@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, 
@@ -20,6 +21,13 @@ import {
 } from "lucide-react";
 
 import { useSession, signOut } from "next-auth/react";
+
+type SidebarItem = {
+  label: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  hideForAdmin?: boolean;
+};
 
 export const Sidebar = () => {
   const pathname = usePathname();
@@ -65,6 +73,7 @@ export const Sidebar = () => {
           { label: "Subscription Plans", href: "/dashboard/subscriptions", icon: Receipt },
           { label: "Payment Gateway", href: "/dashboard/payments", icon: Receipt },
           { label: "Settings", href: "/dashboard/settings", icon: Settings },
+          { label: "Security Mesh", href: "/dashboard/security", icon: ShieldCheck },
         ]
       }
     ] : [
@@ -73,7 +82,6 @@ export const Sidebar = () => {
         items: [
           { label: "Leads", href: "/dashboard/leads", icon: FileText },
           { label: "Themes", href: "/dashboard/templates", icon: LayoutTemplate },
-          { label: "Profile Security", href: "/dashboard/security", icon: ShieldCheck },
         ]
       }
     ])
@@ -90,30 +98,32 @@ export const Sidebar = () => {
         </h1>
       </div>
       <div className="flex-1 px-4 space-y-6 pb-8">
-        {navGroups.map((group, i) => (
+    {navGroups.map((group, i) => (
           <div key={i} className="flex flex-col gap-1">
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2">
               {group.title}
             </div>
-            {group.items.map((item: any, j) => {
+            {group.items.map((item: SidebarItem, j) => {
               if (item.hideForAdmin && isAdmin) return null;
               const Icon = item.icon;
               const isActive = isNavActive(item.href);
               return (
-                <Link 
-                  key={j} 
-                  href={item.href} 
+                <Link
+                  key={j}
+                  href={item.href}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
-                    isActive 
-                      ? "bg-indigo-50 text-indigo-700" 
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
-                  <Icon className={cn(
-                    "w-5 h-5",
-                    isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
-                  )} />
+                  <Icon
+                    className={cn(
+                      "w-5 h-5",
+                      isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
+                    )}
+                  />
                   {item.label}
                 </Link>
               );

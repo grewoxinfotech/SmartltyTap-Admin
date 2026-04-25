@@ -7,6 +7,7 @@ declare module "next-auth" {
       id: string;
       role: string;
       accessToken?: string;
+      mustResetPassword?: boolean;
     } & DefaultSession["user"];
   }
 
@@ -14,6 +15,7 @@ declare module "next-auth" {
     id: string;
     role: string;
     accessToken?: string;
+    mustResetPassword?: boolean;
   }
 }
 
@@ -22,5 +24,6 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     accessToken?: string;
+    mustResetPassword?: boolean;
   }
 }

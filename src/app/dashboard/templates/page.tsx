@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import type { SVGProps } from "react";
 import { useSession } from "next-auth/react";
 import { adminApi } from "@/services/api";
 import { DataTable } from "@/components/ui/DataTable";
@@ -24,17 +25,28 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type TemplateRow = {
+  id: string;
+  name: string;
+  preview_image?: string | null;
+  category?: string | null;
+  is_active: boolean;
+};
+
 export default function TemplatesManager() {
   const { data: session } = useSession();
   const token = session?.user?.accessToken;
 
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<TemplateRow[]>([]);
+  const [templateMeta, setTemplateMeta] = useState<{
+    activeCount: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateRow | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -44,19 +56,20 @@ export default function TemplatesManager() {
     is_active: "true"
   });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return;
     try {
       const res = await adminApi.listTemplates(token);
       setTemplates(res?.data || []);
+      setTemplateMeta(res?.meta || null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     load();
-  }, [token]);
+  }, [load]);
 
   const openAddModal = () => {
     setEditingTemplate(null);
@@ -64,7 +77,7 @@ export default function TemplatesManager() {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (template: any) => {
+  const openEditModal = (template: TemplateRow) => {
     setEditingTemplate(template);
     setFormData({
       name: template.name,
@@ -95,7 +108,7 @@ export default function TemplatesManager() {
       await load();
       setIsModalOpen(false);
     } catch (err) {
-      alert("Failed to sync template.");
+      alert(err instanceof Error ? err.message : "Failed to sync template.");
     } finally {
       setSubmitting(false);
     }
@@ -105,7 +118,7 @@ export default function TemplatesManager() {
     {
       header: "Visual Node",
       accessorKey: "name",
-      cell: (row: any) => (
+      cell: (row: TemplateRow) => (
         <div className="flex items-center gap-3">
           <div className="w-12 h-16 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200 overflow-hidden group">
             {row.preview_image ? (
@@ -124,7 +137,7 @@ export default function TemplatesManager() {
     {
       header: "Thematic Category",
       accessorKey: "category",
-      cell: (row: any) => (
+      cell: (row: TemplateRow) => (
         <div className="flex items-center gap-2">
            <Palette className="w-3.5 h-3.5 text-indigo-400" />
            <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">{row.category || "General"}</span>
@@ -134,7 +147,7 @@ export default function TemplatesManager() {
     {
        header: "Internal Status",
        accessorKey: "is_active",
-       cell: (row: any) => (
+       cell: (row: TemplateRow) => (
          <div className="flex items-center gap-2">
             <div className={cn(
               "w-2 h-2 rounded-full",
@@ -152,7 +165,7 @@ export default function TemplatesManager() {
     {
       header: "Operations",
       accessorKey: "actions",
-      cell: (row: any) => (
+      cell: (row: TemplateRow) => (
         <div className="flex items-center gap-1">
           <button
             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
@@ -199,6 +212,11 @@ export default function TemplatesManager() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Design Gallery</h1>
           <p className="text-slate-500 mt-1 text-sm max-w-lg">Manage the visual themes available for your users. Create and edit templates here.</p>
+          {templateMeta && (
+            <p className="mt-2 text-xs font-semibold text-emerald-600">
+              Active templates: {templateMeta.activeCount}
+            </p>
+          )}
         </div>
         <button
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-lg shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98]"
@@ -347,7 +365,7 @@ export default function TemplatesManager() {
 }
 
 // Fixed import for ShieldCheck which was missing
-const ShieldCheck = (props: any) => (
+const ShieldCheck = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     xmlns="http://www.w3.org/2000/svg"

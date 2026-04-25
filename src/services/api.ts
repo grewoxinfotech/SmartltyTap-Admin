@@ -20,7 +20,15 @@ export async function fetchApi(endpoint: string, options: ApiOptions = {}) {
   const response = await fetch(url, { ...fetchOptions, headers });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    let message = `API Error: ${response.statusText}`;
+    try {
+      const payload = await response.json();
+      if (payload?.message) message = payload.message;
+      else if (payload?.error) message = payload.error;
+    } catch {
+      // Ignore body parse errors and keep default message
+    }
+    throw new Error(message);
   }
 
   return response.json();
@@ -55,11 +63,22 @@ export const adminApi = {
   createCard: (body: { cardUid: string, userId?: string }, token?: string) => fetchApi("/cards/create", { method: "POST", body: JSON.stringify(body), token }),
   assignCard: (cardUid: string, userId: string, token?: string) =>
     fetchApi("/cards/assign", { method: "POST", body: JSON.stringify({ cardUid, userId }), token }),
+  sellCard: (
+    body: {
+      cardUid: string;
+      buyerName: string;
+      buyerEmail: string;
+      buyerPhone?: string;
+      businessType?: string;
+      templateId?: string;
+    },
+    token?: string
+  ) => fetchApi("/cards/sell", { method: "POST", body: JSON.stringify(body), token }),
   reassignCard: (oldCardUid: string, newCardUid: string, userId: string, token?: string) =>
     fetchApi("/cards/reassign", { method: "POST", body: JSON.stringify({ oldCardUid, newCardUid, userId }), token }),
   updateCardStatus: (cardId: string, isActive: boolean, token?: string) =>
     fetchApi(`/cards/${cardId}/status`, { method: "PATCH", body: JSON.stringify({ isActive }), token }),
-  updateCard: (id: string, body: any, token?: string) =>
+  updateCard: (id: string, body: unknown, token?: string) =>
     fetchApi(`/cards/${id}`, { method: "PATCH", body: JSON.stringify(body), token }),
 
   // Profiles
@@ -82,14 +101,19 @@ export const adminApi = {
   },
 
   // Templates / themes
-  listTemplates: (token?: string) => fetchApi("/templates", { token }),
+  listTemplates: async (token?: string, businessType?: string) => {
+    const query = businessType ? `?businessType=${encodeURIComponent(businessType)}` : "";
+    const response = await fetchApi(`/templates${query}`, { token });
+    if (Array.isArray(response?.data)) return response;
+    return { ...response, data: response?.data?.templates || [], meta: response?.data?.meta || null };
+  },
   createTemplate: (body: unknown, token?: string) => fetchApi("/templates/create", { method: "POST", body: JSON.stringify(body), token }),
   updateTemplate: (id: string, body: unknown, token?: string) =>
     fetchApi(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(body), token }),
   assignTemplate: (body: unknown, token?: string) => fetchApi("/templates/assign", { method: "POST", body: JSON.stringify(body), token }),
   listMyThemeOptions: (token?: string) => fetchApi("/templates/my-options", { token }),
-  selectMyTheme: (templateId: string, token?: string) =>
-    fetchApi("/templates/my-select", { method: "POST", body: JSON.stringify({ templateId }), token }),
+  selectMyTheme: (templateId: string, token?: string, businessType?: string) =>
+    fetchApi("/templates/my-select", { method: "POST", body: JSON.stringify({ templateId, businessType }), token }),
 
   // Settings / API control
   getSettings: (token?: string) => fetchApi("/settings", { token }),

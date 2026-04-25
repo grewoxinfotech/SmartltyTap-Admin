@@ -5,35 +5,53 @@ import { useSession } from "next-auth/react";
 import { adminApi } from "@/services/api";
 import { DataTable } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
+import { Select } from "@/components/ui/Select";
 import { FileUploader } from "@/components/ui/FileUploader";
 import { 
   UserCircle, 
   Image as ImageIcon, 
   FileText, 
-  Plus, 
   X, 
   Loader2, 
-  ShieldAlert, 
   Eye, 
-  Edit, 
   Download, 
   Layout, 
   CheckCircle2, 
   Zap,
   Globe,
   Camera,
-  Layers,
-  Search
+  Layers
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 export default function ProfilesManagement() {
-  const { data: session, status: authStatus } = useSession();
+  const { data: session } = useSession();
   const token = session?.user?.accessToken;
 
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  type ProfileRow = {
+    id: string;
+    userId: string;
+    name?: string;
+    profileImage?: string;
+    template?: string;
+    gallery?: string[];
+    brochure?: { url: string; name?: string } | null;
+    title?: string;
+    bio?: string;
+    phone?: string;
+    whatsapp?: string;
+    instagram?: string;
+    website?: string;
+    googleReview?: string;
+    branding?: { primary?: string; secondary?: string };
+    mode?: "SMART" | "DIRECT";
+  };
+  type UserRow = { id: string; name?: string; email?: string };
+  type ThemeOption = { id: string; name: string };
+
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
@@ -56,7 +74,11 @@ export default function ProfilesManagement() {
     mode: "SMART"
   });
   const [saving, setSaving] = useState(false);
+  const [themeSaving, setThemeSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
+  const [themeOptions, setThemeOptions] = useState<ThemeOption[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [templateMeta, setTemplateMeta] = useState<{ activeCount?: number } | null>(null);
 
   const tabs = [
     { id: "personal", label: "Basic Info", icon: UserCircle },
@@ -65,7 +87,7 @@ export default function ProfilesManagement() {
     { id: "gallery", label: "Gallery Hub", icon: ImageIcon }
   ];
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return;
     try {
       if (isAdmin) {
@@ -76,7 +98,10 @@ export default function ProfilesManagement() {
         setProfiles(pRes?.data || []);
         setUsers(uRes?.data || []);
       } else {
-        const res = await adminApi.getProfile(token); // Backend should return user's profile
+        const [res, themes] = await Promise.all([
+          adminApi.getProfile(token), // Backend should return user's profile
+          adminApi.listMyThemeOptions(token),
+        ]);
         if (res.data?.profile) {
           setProfiles([res.data.profile]);
           setFormData({
@@ -95,15 +120,18 @@ export default function ProfilesManagement() {
             mode: res.data.profile.mode || "SMART"
           });
         }
+        setThemeOptions(themes?.data?.templates || []);
+        setSelectedTemplateId(themes?.data?.selectedTemplateId || "");
+        setTemplateMeta({ activeCount: themes?.data?.activeCount || 0 });
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, isAdmin]);
 
   useEffect(() => {
     load();
-  }, [token, isAdmin]);
+  }, [load]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,10 +141,24 @@ export default function ProfilesManagement() {
       await adminApi.updateProfile(formData, token);
       await load();
       alert("Profile synchronized successfully!");
-    } catch (err) {
+    } catch {
       alert("Failed to sync profile.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleApplyTemplate = async () => {
+    if (!token || !selectedTemplateId) return;
+    setThemeSaving(true);
+    try {
+      await adminApi.selectMyTheme(selectedTemplateId, token, formData.title || undefined);
+      await load();
+      alert("Template applied successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to apply template.");
+    } finally {
+      setThemeSaving(false);
     }
   };
 
@@ -132,7 +174,7 @@ export default function ProfilesManagement() {
        await load();
     }
     return uploadRes.data;
-  }, [token, selectedProfileId, isAdmin, profiles]);
+  }, [token, selectedProfileId, isAdmin, profiles, load]);
 
   const handleBrochureUpload = useCallback(async (file: File) => {
     const targetProfile = isAdmin ? profiles.find(p => p.id === selectedProfileId) : profiles[0];
@@ -149,17 +191,17 @@ export default function ProfilesManagement() {
        await load();
     }
     return res.data;
-  }, [token, selectedProfileId, isAdmin, profiles]);
+  }, [token, selectedProfileId, isAdmin, profiles, load]);
 
   const columns = [
     {
       header: "VCard Name",
       accessorKey: "name",
-      cell: (row: any) => (
+      cell: (row: ProfileRow) => (
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-indigo-600 overflow-hidden border border-slate-200 shadow-sm group">
             {row.profileImage ? (
-              <img src={row.profileImage} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+              <img src={row.profileImage} alt={`${row.name || "User"} profile`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
             ) : (
               <UserCircle className="w-6 h-6 text-slate-300" />
             )}
@@ -174,7 +216,7 @@ export default function ProfilesManagement() {
     {
       header: "Owner",
       accessorKey: "userId",
-      cell: (row: any) => {
+      cell: (row: ProfileRow) => {
         const user = users.find(u => u.id === row.userId);
         return (
           <div className="flex flex-col">
@@ -187,7 +229,7 @@ export default function ProfilesManagement() {
     {
       header: "Design",
       accessorKey: "template",
-      cell: (row: any) => (
+      cell: (row: ProfileRow) => (
         <div className="flex items-center gap-2 px-2.5 py-1 bg-indigo-50 rounded-lg border border-indigo-100 w-fit">
            <Layout className="w-3.5 h-3.5 text-indigo-500" />
            <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">{row.template || "Standard"}</span>
@@ -197,7 +239,7 @@ export default function ProfilesManagement() {
     {
       header: "Images",
       accessorKey: "assets",
-      cell: (row: any) => (
+      cell: (row: ProfileRow) => (
         <div className="flex items-center gap-4">
            <div className="flex items-center gap-1.5" title="Gallery Nodes">
               <Camera className="w-3.5 h-3.5 text-slate-400" />
@@ -212,7 +254,7 @@ export default function ProfilesManagement() {
     {
       header: "Ops",
       accessorKey: "actions",
-      cell: (row: any) => (
+      cell: (row: ProfileRow) => (
         <div className="flex items-center gap-1">
           <button 
             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
@@ -287,7 +329,7 @@ export default function ProfilesManagement() {
                       <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center gap-8">
                          <div className="w-24 h-24 rounded-3xl bg-white border-4 border-white shadow-xl flex items-center justify-center text-indigo-600 overflow-hidden group relative">
                             {myProfile?.profileImage ? (
-                               <img src={myProfile.profileImage} className="w-full h-full object-cover" />
+                               <img src={myProfile.profileImage} alt="My profile" className="w-full h-full object-cover" />
                             ) : (
                                <UserCircle className="w-12 h-12 text-slate-200" />
                             )}
@@ -410,7 +452,7 @@ export default function ProfilesManagement() {
                                  <button
                                    key={m}
                                    type="button"
-                                   onClick={() => setFormData({...formData, mode: m as any})}
+                                  onClick={() => setFormData({...formData, mode: m as "SMART" | "DIRECT"})}
                                    className={cn(
                                      "flex-1 py-3 rounded-2xl text-[10px] font-black transition-all uppercase tracking-widest",
                                      formData.mode === m ? "bg-white text-indigo-600 shadow-md" : "text-slate-400 hover:text-slate-600"
@@ -420,6 +462,37 @@ export default function ProfilesManagement() {
                                  </button>
                                ))}
                             </div>
+                         </div>
+                      </div>
+
+                      <div className="p-8 bg-white rounded-[2rem] border border-slate-100 space-y-4">
+                         <div className="flex items-center justify-between gap-4">
+                            <div>
+                               <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Template Selection</h4>
+                               <p className="text-xs text-slate-500 mt-1">
+                                  {templateMeta ? `Active templates: ${templateMeta.activeCount || 0}` : "Choose a template for your business profile"}
+                               </p>
+                            </div>
+                         </div>
+                         <Select
+                           label="Choose Theme Template"
+                           value={selectedTemplateId}
+                           onChange={setSelectedTemplateId}
+                           options={[
+                             { value: "", label: "Select template..." },
+                             ...themeOptions.map((t) => ({ value: t.id, label: t.name })),
+                           ]}
+                         />
+                         <div className="flex justify-end pt-2">
+                           <button
+                             type="button"
+                             disabled={themeSaving || !selectedTemplateId}
+                             onClick={handleApplyTemplate}
+                             className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
+                           >
+                             {themeSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                             Apply Template
+                           </button>
                          </div>
                       </div>
 
@@ -450,7 +523,7 @@ export default function ProfilesManagement() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                          {(myProfile?.gallery || []).map((img: string, i: number) => (
                            <div key={i} className="aspect-square rounded-[2rem] overflow-hidden border border-slate-100 group relative shadow-sm hover:shadow-xl transition-all">
-                              <img src={img} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                              <img src={img} alt={`Gallery image ${i + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                               <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                  <button type="button" className="p-3 bg-white/20 backdrop-blur-xl rounded-2xl text-white hover:bg-white/40 transition-all">
                                     <X className="w-5 h-5" />
@@ -554,7 +627,7 @@ export default function ProfilesManagement() {
              <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-3xl border border-slate-100 mb-2">
                 <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white shadow-sm">
                    {selectedProfile.profileImage ? (
-                     <img src={selectedProfile.profileImage} className="w-full h-full object-cover" />
+                     <img src={selectedProfile.profileImage} alt={`${selectedProfile.name || "Profile"} avatar`} className="w-full h-full object-cover" />
                    ) : (
                      <div className="w-full h-full bg-indigo-50 flex items-center justify-center text-indigo-400"><UserCircle className="w-8 h-8" /></div>
                    )}
@@ -579,7 +652,7 @@ export default function ProfilesManagement() {
                    <div className="grid grid-cols-4 gap-2 pt-2">
                       {(selectedProfile.gallery || []).map((img: string, i: number) => (
                         <div key={i} className="aspect-square rounded-xl overflow-hidden border border-slate-100 relative group">
-                           <img src={img} className="w-full h-full object-cover" />
+                           <img src={img} alt={`Profile gallery image ${i + 1}`} className="w-full h-full object-cover" />
                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <X className="w-4 h-4 text-white cursor-pointer" />
                            </div>

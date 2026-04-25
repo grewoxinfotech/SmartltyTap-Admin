@@ -19,6 +19,7 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
+
         const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
         const res = await fetch(`${base}/auth/login`, {
           method: "POST",
@@ -35,6 +36,7 @@ export const authOptions: NextAuthOptions = {
           name: payload.data.user.name,
           role: payload.data.user.role,
           accessToken: payload.data.token,
+          mustResetPassword: Boolean(payload.data.user.must_reset_password),
         } as User;
       },
     }),
@@ -45,6 +47,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.accessToken = token.accessToken as string;
+        session.user.mustResetPassword = Boolean(token.mustResetPassword);
       }
       return session;
     },
@@ -53,6 +56,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as User).role;
         token.accessToken = (user as User & { accessToken?: string }).accessToken;
+        token.mustResetPassword = Boolean((user as User & { mustResetPassword?: boolean }).mustResetPassword);
       }
       return token;
     },

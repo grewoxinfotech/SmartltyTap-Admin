@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { adminApi } from "@/services/api";
 import { DataTable } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
@@ -26,12 +27,21 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function SecurityPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const token = session?.user?.accessToken;
+  const role = session?.user?.role;
   const [admins, setAdmins] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!session || (role !== "ADMIN" && role !== "SUPER_ADMIN")) {
+      router.push("/dashboard");
+    }
+  }, [session, role, status, router]);
 
   // Modals
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
